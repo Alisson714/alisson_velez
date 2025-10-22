@@ -1,15 +1,27 @@
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
 def add(a, b):
     return a + b
 
-if __name__ == "__main__":
-    import sys
-    if len(sys.argv) != 3:
-        print("Usage: python calculator.py <num1> <num2>")
-        sys.exit(1)
+@app.route('/add', methods=['GET'])
+def add_endpoint():
     try:
-        num1 = float(sys.argv[1])
-        num2 = float(sys.argv[2])
-        result = add(num1, num2)
-        print(f"The sum of {num1} and {num2} is {result}")
+        a = float(request.args.get('a', 0))
+        b = float(request.args.get('b', 0))
+        result = add(a, b)
+        return jsonify({'result': result})
     except ValueError:
-        print("Please provide valid numbers.")
+        return jsonify({'error': 'Invalid numbers provided'}), 400
+
+@app.route('/')
+def home():
+    return '''
+    <h1>Calculator API</h1>
+    <p>Use GET /add?a=2&b=3 to add two numbers</p>
+    <p>Example: <a href="/add?a=2&b=3">/add?a=2&b=3</a></p>
+    '''
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=3000, debug=True)

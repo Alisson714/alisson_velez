@@ -1,27 +1,44 @@
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
+import http.server
+import socketserver
+import urllib.parse
+import json
 
 def add(a, b):
     return a + b
 
-@app.route('/add', methods=['GET'])
-def add_endpoint():
-    try:
-        a = float(request.args.get('a', 0))
-        b = float(request.args.get('b', 0))
-        result = add(a, b)
-        return jsonify({'result': result})
-    except ValueError:
-        return jsonify({'error': 'Invalid numbers provided'}), 400
-
-@app.route('/')
-def home():
-    return '''
-    <h1>Calculator API</h1>
-    <p>Use GET /add?a=2&b=3 to add two numbers</p>
-    <p>Example: <a href="/add?a=2&b=3">/add?a=2&b=3</a></p>
-    '''
+class CalculatorHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        parsed_path = urllib.parse.urlparse(self.path)
+        if parsed_path.path == '/add':
+            query = urllib.parse.parse_qs(parsed_path.query)
+            try:
+                a = float(query.get('a', ['0'])[0])
+                b = float(query.get('b', ['0'])[0])
+                result = add(a, b)
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'result': result}).encode())
+            except (ValueError, TypeError):
+                self.send_response(400)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error': 'Invalid numbers provided'}).encode())
+        elif parsed_path.path == '/':
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            html = '''
+            <h1>Calculator API</h1>
+            <p>Use GET /add?a=2&b=3 to add two numbers</p>
+            <p>Example: <a href="/add?a=2&b=3">/add?a=2&b=3</a></p>
+            '''
+            self.wfile.write(html.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True)
+    with socketserver.TCPServer(("", 4000), CalculatorHandler) as httpd:
+        print("Serving on port 4000")
+        httpd.serve_forever()

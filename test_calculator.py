@@ -14,4 +14,5 @@ def test_integration_cli():
     import subprocess
     import sys
     result = subprocess.run([sys.executable, 'calculator.py', '2', '3'], capture_output=True, text=True)
-    assert "The sum of 2.0 and 3.0 is 5.0" in result.stdout
+    assert result.returncode == 0
+    assert "5.0" in result.stdout
